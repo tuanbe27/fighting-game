@@ -31,7 +31,7 @@ c.fillRect(0, 0, canvas.width, canvas.height);
 const gravity = 1;
 
 class Sprite {
-  constructor({ position, velocity, color }) {
+  constructor({ position, velocity, color, offset }) {
     this.position = position;
     this.velocity = velocity;
     this.height = 150;
@@ -39,10 +39,15 @@ class Sprite {
     this.lastKey;
     this.color = color;
     this.attackBox = {
-      position: this.position,
+      position: {
+        x: this.position.x,
+        y: this.position.y,
+      },
+      offset,
       width: 100,
       height: 50,
     };
+    this.isAttacking;
   }
 
   draw() {
@@ -50,6 +55,7 @@ class Sprite {
     c.fillRect(this.position.x, this.position.y, this.width, this.height);
 
     //Attack Box
+    // if (this.isAttacking) {
     c.fillStyle = 'green';
     c.fillRect(
       this.attackBox.position.x,
@@ -57,10 +63,14 @@ class Sprite {
       this.attackBox.width,
       this.attackBox.height
     );
+    // }
   }
 
   update() {
     this.draw();
+
+    this.attackBox.position.x = this.position.x + this.attackBox.offset.x;
+    this.attackBox.position.y = this.position.y;
 
     this.position.x += this.velocity.x;
     this.position.y += this.velocity.y;
@@ -75,6 +85,13 @@ class Sprite {
       this.position.x = canvas.width - 50;
     }
   }
+
+  attack() {
+    this.isAttacking = true;
+    setTimeout(() => {
+      this.isAttacking = false;
+    }, 100);
+  }
 }
 
 const player = new Sprite({
@@ -87,6 +104,10 @@ const player = new Sprite({
     y: 0,
   },
   color: 'red',
+  offset: {
+    x: 0,
+    y: 0,
+  },
 });
 
 const enemy = new Sprite({
@@ -99,6 +120,10 @@ const enemy = new Sprite({
     y: 0,
   },
   color: 'blue',
+  offset: {
+    x: -50,
+    y: 0,
+  },
 });
 
 const keys = {
@@ -121,6 +146,18 @@ const keys = {
     pressed: false,
   },
 };
+
+function rectangularCollision({ rectanger1, rectanger2 }) {
+  return (
+    rectanger1.attackBox.position.x + rectanger1.attackBox.width >=
+      rectanger2.position.x &&
+    rectanger1.attackBox.position.x <=
+      rectanger2.position.x + rectanger2.width &&
+    rectanger1.attackBox.position.y + rectanger1.attackBox.height >=
+      rectanger2.position.y &&
+    rectanger1.attackBox.position.y <= rectanger2.position.y + rectanger2.height
+  );
+}
 
 function animate() {
   window.requestAnimationFrame(animate);
@@ -152,13 +189,25 @@ function animate() {
 
   //detect for collision
   if (
-    player.attackBox.position.x + player.attackBox.width >= enemy.position.x &&
-    player.attackBox.position.x <= enemy.position.x + enemy.width &&
-    player.attackBox.position.y + player.attackBox.height >= enemy.position.y &&
-    player.attackBox.position.y <= enemy.position.y + enemy.height &&
+    rectangularCollision({
+      rectanger1: player,
+      rectanger2: enemy,
+    }) &&
     player.isAttacking
   ) {
-    console.log('collision');
+    player.isAttacking = false;
+    console.log('player attacked');
+  }
+
+  if (
+    rectangularCollision({
+      rectanger1: enemy,
+      rectanger2: player,
+    }) &&
+    enemy.isAttacking
+  ) {
+    enemy.isAttacking = false;
+    console.log('enemy attacked');
   }
 }
 
@@ -179,6 +228,9 @@ window.addEventListener('keydown', (event) => {
         player.velocity.y = -25;
       }
       break;
+    case ' ':
+      player.attack();
+      break;
 
     //Enemy Key
     case 'ArrowRight':
@@ -193,6 +245,9 @@ window.addEventListener('keydown', (event) => {
       if (enemy.position.y >= 426) {
         enemy.velocity.y = -25;
       }
+      break;
+    case '0':
+      enemy.attack();
       break;
   }
 });
